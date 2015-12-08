@@ -8,7 +8,6 @@ set -u # abort on unbound variable
 
 #{{{ Variables
 #}}}
-
  #{{{ Functions
 
 usage() {
