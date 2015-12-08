@@ -21,3 +21,16 @@ The installer will copy all scripts into the specified directory. If you omit th
 - **`atb-role-deps.sh`**: Installs all roles mentioned in `ansible/site.yml`.
 
 Remark that none of the scripts require superuser privileges.
+
+## Contributing
+
+Issues, feature requests, ideas are appreciated and can be posted in the Issues section. Pull requests are also very welcome. Preferably, create a topic branch and when submitting, squash your commits into one (with a descriptive message).
+
+## License
+
+BSD
+
+## Author Information
+
+Bert Van Vreckem (bert.vanvreckem@gmail.com)
+
