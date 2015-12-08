@@ -50,6 +50,19 @@ install_script() {
     "${script_path}" "${install_dir}/${cmd_name}"
 }
 
+# Usage ensure_install_dir_on_PATH
+# Ensure that the installation directory is on the ${PATH}
+ensure_install_dir_on_PATH() {
+
+if ! which atb-init > /dev/null 2>&1; then
+cat >> "${HOME}/.bashrc" <<-_EOF_
+
+# Add Ansible Toolbox scripts to the PATH
+export PATH=\${PATH}:${install_dir}
+_EOF_
+fi
+}
+
 #}}}
 #{{{ Variables
 
@@ -81,3 +94,5 @@ validate_install_dir "${install_dir}"
 for script in "${src_dir}"/*; do
   install_script "${script}"
 done
+
+ensure_install_dir_on_PATH
