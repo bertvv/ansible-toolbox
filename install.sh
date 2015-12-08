@@ -43,24 +43,35 @@ install_script() {
   local script_path="${1}"
 
   # strip path and extension
-  script_name="${script_path##*/}"
-  cmd_name="${script_name%.sh}"
+  local script_name="${script_path##*/}"
+  local cmd_name="${script_name%.sh}"
 
   install --compare --verbose \
     "${script_path}" "${install_dir}/${cmd_name}"
 }
 
-# Usage ensure_install_dir_on_PATH
-# Ensure that the installation directory is on the ${PATH}
-ensure_install_dir_on_PATH() {
-
-if ! which atb-init > /dev/null 2>&1; then
+# Usage: update_path_in_bashrc
+# Adds the installation directory to the end of ~/.bashrc
+update_path_in_bashrc() {
 cat >> "${HOME}/.bashrc" <<-_EOF_
 
 # Add Ansible Toolbox scripts to the PATH
 export PATH=\${PATH}:${install_dir}
 _EOF_
-fi
+}
+
+# Usage ensure_scripts_on_PATH
+# Check whether the installed scripts are on the ${PATH} and if not, add
+# installation directory to ~/.bashrc if possible
+ensure_scripts_on_PATH() {
+
+  if ! which atb-init > /dev/null 2>&1; then
+    if [ -f "${HOME}/.bashrc" ]; then
+      update_path_in_bashrc
+    else
+      echo "Warning: the installation directory is not in the PATH"
+    fi
+  fi
 }
 
 #}}}
@@ -95,4 +106,4 @@ for script in "${src_dir}"/*; do
   install_script "${script}"
 done
 
-ensure_install_dir_on_PATH
+ensure_scripts_on_PATH
