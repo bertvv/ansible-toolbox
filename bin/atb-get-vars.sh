@@ -30,6 +30,7 @@ readonly INVENTORY="${PWD}/.vagrant/provisioners/ansible/inventory/vagrant_ansib
 #}}}
 
 main() {
+  check_if_help_is_wanted "${@}"
   check_if_inventory_exists
 
   hosts=$(determine_target_hosts "${@}")
@@ -40,6 +41,15 @@ main() {
 }
 
 #{{{ Helper functions
+
+check_if_help_is_wanted() {
+  if [ "${#}" -gt "0" ]; then
+    if [ "${1}" = '-h' -o "${1}" = '--help' -o "${1}" = '-?' ]; then
+      usage
+      exit
+    fi
+  fi
+}
 
 check_if_inventory_exists() {
   if [ ! -f "${INVENTORY}" ]; then
@@ -70,10 +80,15 @@ enumerate_vagrant_hosts() {
 # Print usage message on stdout
 usage() {
 cat << _EOF_
-Usage: ${SCRIPT_NAME} HOST...
+Usage: ${SCRIPT_NAME} [OPTION] [HOST...]
 
   Retrieves Ansible variables/facts from the specified hosts (assumed to be
-  Vagrant VMs
+  Vagrant VMs. If no host was specified, all hosts of the current Vagrant
+  environment are selected.
+
+OPTIONS:
+
+  -?, -h, --help    Prints this help message and exits (with status 0)
 
 EXAMPLES:
 
