@@ -15,6 +15,7 @@ The installer will copy all scripts into the specified directory. If you omit th
 ## The scripts
 
 - **`atb-export-vm`**: export a VirtualBox VM to an .ova file, removing the shared folder created by Vagrant.
+- **`atb-get-vars`**: list all [facts](https://docs.ansible.com/ansible/playbooks_variables.html#information-discovered-from-systems-facts) (`ansible_*` variables) from a Vagrant box.
 - **`atb-init-role`**: set up scaffolding code for an Ansible role based on <https://github.com/bertvv/ansible-role-skeleton/>. (Requires Git v2.5.0 for [git-worktree](https://git-scm.com/docs/git-worktree)).
 - **`atb-init`**: set up scaffolding code for a Vagrant+Ansible development environment based on <https://github.com/bertvv/ansible-skeleton/>.
 - **`atb-provision`**: Run `ansible-playbook` on a host managed by Vagrant. The benefit of this is that you can limit execution to specific hosts (`--limit=<hosts>`) or tags (`--tags=<tags>`). All options specified on the command line are passed on to `ansible-playbook`.
