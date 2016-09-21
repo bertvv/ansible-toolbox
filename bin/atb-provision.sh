@@ -9,8 +9,7 @@ set -o errexit # abort on nonzero exitstatus
 set -o nounset # abort on unbound variable
 
 #{{{ Variables
-script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-inventory_file="${script_dir}/../.vagrant/provisioners/ansible/inventory/vagrant_ansible_inventory"
+inventory_file=".vagrant/provisioners/ansible/inventory/vagrant_ansible_inventory"
 ssh_user=vagrant
 private_key_path="${HOME}/.vagrant.d/insecure_private_key"
 #}}}
@@ -27,19 +26,41 @@ from the same directory as the Vagrantfile.
 _EOF_
 }
 
- #}}}
+find_private_key() {
+  local vagrant_key
+  local num_keys_found
+
+  vagrant_key=$(ls .vagrant/machines/*/virtualbox/private_key)
+  num_keys_found=$(echo "${vagrant_key}" | wc --lines)
+
+  if [ "${num_keys_found}" -gt "1" ]; then
+    cat >&2 << _EOF_
+I found multiple private keys in the current Vagrant environment. Sorry,
+I can't handle that (yet?).
+_EOF_
+    exit 2
+  fi
+
+  private_key_path="${vagrant_key}"
+}
+
+#}}}
 #  {{{ Command line parsing
 
-if [ $# -gt 0 -a -f "${1}" ]; then
+if [ "${#}" -gt "0" -a -f "${1}" ]; then
   playbook="${1}"
   shift
 else
-  playbook="${script_dir}/../ansible/site.yml"
+  playbook="ansible/site.yml"
 fi
 
 
 # }}}
 # Script proper
+
+# Ignore SSH host key checking (it would create an entry in ~/.ssh/known_hosts
+# and fail when you create a new VM.
+export ANSIBLE_HOST_KEY_CHECKING=False
 
 ansible-playbook \
   "${playbook}" \
