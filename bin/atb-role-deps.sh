@@ -2,18 +2,14 @@
 #
 # Author: Bert Van Vreckem <bert.vanvreckem@gmail.com>
 #
-# Install role dependencies
+# Install role dependencies. This script is meant to be used in the context of
+# ansible-skeleton[1] and ansible-role-skeleton[2].
 #
-# ansible/roles contains all roles used by nodes managed in this
-# project. Generic roles from Ansible Galaxy are stored in a directory
-# with name "user.rolename". These directories are ignored by
-# .gitignore and should be installed after cloning the project
-# repository. That's what this script does...
-#
-# The script will search ansible/site.yml for roles assigned to hosts
-# with names in the "user.role" form and will try to install them all.
-# If possible, it will use Ansible Galaxy (on Linux), but if this is not
-# available (e.g. on Windows), it will use Git to clone the latest version.
+# This script will search ansible/site.yml (or the specified playbook) for
+# roles assigned to hosts in the form "user.role". It will then try to install
+# them all. If possible, it will use Ansible Galaxy (on Linux, MacOS), but if
+# this is not available (e.g. on Windows), it will use Git to clone the latest
+# revision.
 #
 # Remark that this is a very crude technique and especially the Git fallback
 # is very brittle. It will download HEAD, and not necessarily the latest
@@ -23,6 +19,9 @@
 # Using ansible-galaxy and a dependencies.yml file is the best method, but
 # unavailable on Windows. This script is an effort to have a working
 # alternative.
+#
+# [1] https://github.com/bertvv/ansible-skeleton
+# [2] https://github.com/bertvv/ansible-role-skeleton
 
 set -o errexit  # abort on nonzero exitstatus
 set -o nounset  # abort on unbound variable
@@ -40,6 +39,7 @@ main() {
 
   process_args "${@}"
 
+  set_roles_path
   select_installer
 
   dependencies="$(find_dependencies)"
@@ -58,6 +58,14 @@ main() {
 
 #{{{ Helper functions
 
+# If the default roles path does not exist, try "roles/"
+set_roles_path() {
+  if [ ! -d "${roles_path}" ]; then
+    roles_path="roles"
+  fi
+}
+
+# Find dependencies in the specified playbook
 find_dependencies() {
   grep '    - .*\..*' "${playbook}" \
     | cut --characters=7- \
