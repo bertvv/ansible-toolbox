@@ -24,15 +24,92 @@
 # unavailable on Windows. This script is an effort to have a working
 # alternative.
 
-set -o errexit # abort on nonzero exitstatus
-set -o nounset # abort on unbound variable
+set -o errexit  # abort on nonzero exitstatus
+set -o nounset  # abort on unbound variable
+set -o pipefail # don’t hide errors within pipes
 
 #{{{ Variables
-dependencies=$(grep '    - .*\..*' ansible/site.yml | cut -c7- | sort -u)
+readonly SCRIPT_NAME=$(basename "${0}")
+
+playbook=ansible/site.yml
 roles_path=ansible/roles
 #}}}
 
-#{{{ Functions
+main() {
+  local dependencies
+
+  process_args "${@}"
+
+  select_installer
+
+  dependencies="$(find_dependencies)"
+
+  for dep in ${dependencies}; do
+    owner=${dep%%.*}
+    role=${dep##*.}
+
+    if [[ ! -d "${roles_path}/${dep}" ]]; then
+      ${installer} "${owner}" "${role}"
+    else
+      echo "+ Skipping ${dep}, seems to be installed already"
+    fi
+  done
+}
+
+#{{{ Helper functions
+
+find_dependencies() {
+  grep '    - .*\..*' "${playbook}" \
+    | cut --characters=7- \
+    | sort --unique
+}
+
+# Check if command line arguments are valid
+process_args() {
+  if [ "${#}" -gt "1" ]; then
+    echo "Expected at most 1 argument, got ${#}" >&2
+    usage
+    exit 2
+  elif [ "${#}" -eq "1" ]; then
+    if [ "${1}" = '-h' -o "${1}" = '--help' ]; then
+      usage
+      exit 0
+    elif [ ! -f "${1}" ]; then
+      echo "Playbook ‘${1}’ not found." >&2
+      usage
+      exit 1
+    else
+      playbook="${1}"
+    fi
+  elif [ "${#}" -eq "0" -a ! -f "${playbook}" ]; then
+    cat << _EOF_
+Default playbook ${playbook} not found. Maybe you should cd to the
+directory above ${playbook%%/*}/, or specify the playbook.
+_EOF_
+    usage
+    exit 1
+  fi
+}
+
+# Print usage message on stdout
+usage() {
+cat << _EOF_
+Usage: ${SCRIPT_NAME} [PLAYBOOK]
+
+  Installs role dependencies found in the specified playbook (or ${playbook}
+  if none was given).
+
+OPTIONS:
+
+  -h, --help  Prints this help message and exits
+
+EXAMPLES:
+
+$ ${SCRIPT_NAME}
+$ ${SCRIPT_NAME} test.yml
+_EOF_
+}
+
 
 # Usage: select_installer
 # Sets the variable `installer`, the function to use when installing roles
@@ -80,18 +157,4 @@ install_role_git() {
 }
 #}}}
 
-# Script proper
-
-select_installer
-
-for dep in ${dependencies}; do
-  owner=${dep%%.*}
-  role=${dep##*.}
-
-  if [[ ! -d "${roles_path}/${dep}" ]]; then
-    ${installer} "${owner}" "${role}"
-  else
-    echo "+ Skipping ${dep}, seems to be installed already"
-  fi
-done
-
+main "${@}"
