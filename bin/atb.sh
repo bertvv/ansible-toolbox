@@ -118,8 +118,7 @@ init_role_dir() {
     return
   fi
 
-  info "Downloading skeleton code from Github"
-  git clone --quiet "${role_skeleton}" "${skeleton_download_dir}"
+  ensure_skeleton_code_is_downloaded
 
   info "Creating local directory for the role"
   mkdir "${role_name}"
@@ -142,15 +141,26 @@ init_role_dir() {
 }
 
 #}}}
+#{{{ ensure_skeleton_code_is_downloaded
+ensure_skeleton_code_is_downloaded() {
+
+  if [ ! -d "${skeleton_download_dir}/.git" ]; then
+    info "Downloading skeleton code from Github"
+    git clone --quiet "${role_skeleton}" "${skeleton_download_dir}"
+  fi
+
+}
+
+#}}}
 #{{{ setup_test_environments
 # Usage: setup_test_environments ROLE_NAME ENVIRONMENT...
 #
 # With ENVIRONMENT one of none, vagrant, or docker, or a comma-separated list
 # of the desired test environments
 setup_test_environments() {
-
   local role_name="${1}"
   local environments
+
   # Split comma separated environment names into an array
   IFS=',' read -ra environments <<< "${2}"
 
@@ -226,6 +236,7 @@ fetch_test_branch() {
   popd > /dev/null 2>&1
 
   # Copy test code from skeleton
+  ensure_skeleton_code_is_downloaded
   pushd "${skeleton_download_dir}" > /dev/null 2>&1
   debug "Copy test code from ${skeleton_download_dir}"
 
@@ -247,7 +258,7 @@ fetch_test_branch() {
   # In the master branch, create a worktree for the test code
   debug "Creating worktree for test branch in the master branch"
   git checkout --quiet master
-  git worktree add "${test_branch}" "${test_branch}" 2> /dev/null
+  git worktree add "${test_branch}" "${test_branch}" > /dev/null 2>&1
   popd > /dev/null 2>&1
 }
 
