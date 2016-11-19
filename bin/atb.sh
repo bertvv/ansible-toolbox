@@ -48,7 +48,6 @@ init_project() {
 #}}}
 #{{{ init_role
 init_role() {
-  info "Initializing role"
   debug "Parameters: ${*}"
 
   local test_env='none'
@@ -100,6 +99,8 @@ init_role() {
 
   local role_name="${1}"
 
+  info "Initializing role ${role_name}"
+
   init_role_dir "${role_name}"
   setup_test_environments "${role_name}" "${test_env}"
 
@@ -111,6 +112,13 @@ init_role() {
 # Usage: init_role_dir ROLE_NAME
 init_role_dir() {
   local role_name="${1}"
+  local current_dir="${PWD##*/}"
+
+  if [ "${current_dir}" = "${role_name}" ]; then
+    debug "We're inside the role directory, going to parent directory"
+    cd ..
+  fi
+
   local role_dir="${PWD}/${role_name}"
 
   if [ -d "${role_dir}" ]; then
@@ -145,7 +153,7 @@ init_role_dir() {
 ensure_skeleton_code_is_downloaded() {
 
   if [ ! -d "${skeleton_download_dir}/.git" ]; then
-    info "Downloading skeleton code from Github"
+    debug "Downloading skeleton code from Github"
     git clone --quiet "${role_skeleton}" "${skeleton_download_dir}"
   fi
 
@@ -189,8 +197,18 @@ setup_test_environments() {
 # Usage: setup_docker_environment ROLE_NAME
 setup_docker_environment() {
   local role_name="${1}"
-  info "Setting up Docker test environment"
-  debug "Not yet implemented"
+  local role_dir="${PWD}/${role_name}"
+
+  fetch_test_branch "${role_name}" 'docker'
+
+  if [ ! -f "${role_dir}/.travis.yml" ]; then
+    debug 'Adding .travis.yml'
+    cd "${role_dir}"
+    cp docker-tests/.travis.yml .
+    git add .travis.yml
+    git commit --quiet --message \
+      'Add .travis.yml'
+  fi
 }
 
 #}}}
@@ -199,23 +217,24 @@ setup_docker_environment() {
 setup_vagrant_environment() {
   local role_name="${1}"
   local role_dir="${PWD}/${role_name}"
-  info "Setting up Vagrant test environment"
 
   fetch_test_branch "${role_name}" 'vagrant'
 
   # Create subdirectory for roles used in the test playbook
-  pushd "${role_dir}/vagrant-tests/" > /dev/null 2>&1
-  mkdir roles
+  if [ ! -d "${role_dir}/vagrant-tests/roles" ]; then
+    debug 'Making role available in the test environment'
+    pushd "${role_dir}/vagrant-tests/" > /dev/null 2>&1
+    mkdir roles
 
-  # Link from roles/ to the project root
-  ln --symbolic --force --no-dereference "../.." "roles/${role_name}"
-  git add .
-  git commit --quiet --message \
-    "Make role under test available in test environment"
+    # Link from roles/ to the project root
+    ln --symbolic --force --no-dereference '../..' "roles/${role_name}"
+    git add .
+    git commit --quiet --message \
+      'Make role under test available in test environment'
+  fi
 }
 
 #}}}
-
 #{{{ fetch_test_branch
 # Usage: fetch_test_branch ROLE_NAME ENVIRONMENT
 #
@@ -226,6 +245,12 @@ fetch_test_branch() {
   local environment="${2}"
   local test_branch="${environment}-tests"
 
+  if [ -d "${role_dir}/${test_branch}" ]; then
+    info "The test environment ${test_branch} already exists, skipping"
+    return
+  fi
+
+  info "Setting up ${environment} test environment"
   debug "Fetching test branch ${test_branch} from Github"
 
   # Create empty branch for the test code
@@ -257,7 +282,8 @@ fetch_test_branch() {
 
   # In the master branch, create a worktree for the test code
   debug "Creating worktree for test branch in the master branch"
-  git checkout --quiet master
+  git checkout --quiet master 2> /dev/null
+  debug "Adding worktree"
   git worktree add "${test_branch}" "${test_branch}" > /dev/null 2>&1
   popd > /dev/null 2>&1
 }
@@ -279,6 +305,7 @@ subst_role_name() {
 # Usage: cleanup
 # Delete temporary files
 cleanup() {
+  debug 'Cleaning up'
   rm -rf "${skeleton_download_dir}"
 }
 
