@@ -20,14 +20,9 @@ IFS=$'\t\n'   # Split on newlines and tabs (but not on spaces)
 
 # Color definitions
 readonly reset='\e[0m'
-readonly black='\e[0;30m'
 readonly red='\e[0;31m'
-readonly green='\e[0;32m'
 readonly yellow='\e[0;33m'
-readonly blue='\e[0;34m'
-readonly purple='\e[0;35m'
 readonly cyan='\e[0;36m'
-readonly white='\e[0;37m'
 
 # Show debug output when value is "on"
 readonly debug_mode='on'
@@ -452,8 +447,9 @@ info() {
 #
 # Prints all arguments on the standard output stream
 debug() {
-  [ "${debug_mode}" = "on" ] && \
+  if [ "${debug_mode}" = 'on' ]; then
     printf "${cyan}### %s${reset}\n" "${*}"
+  fi
 }
 
 # Usage: error [ARG]...
