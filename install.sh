@@ -1,4 +1,4 @@
-#! /usr/bin/bash
+#! /usr/bin/env bash
 #
 # Author: Bert Van Vreckem <bert.vanvreckem@gmail.com>
 #
@@ -46,7 +46,7 @@ install_script() {
   local script_name="${script_path##*/}"
   local cmd_name="${script_name%.sh}"
 
-  install --compare --verbose \
+  install -C -v \
     "${script_path}" "${install_dir}/${cmd_name}"
 }
 
