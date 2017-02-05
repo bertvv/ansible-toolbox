@@ -48,6 +48,9 @@ init_role() {
   local test_env='none'
   local optspec=':t:-:'
 
+  # TODO: check if nonexisting options are parsed correctly
+  # i.e. give an error. Also see fancylongpw.
+
   while getopts "${optspec}" optchar; do
     case "${optchar}" in
       -)
@@ -126,13 +129,12 @@ init_role_dir() {
   info "Creating local directory for the role"
   mkdir "${role_name}"
 
-  # Copy the role skeleton code
+  debug 'Copy the role skeleton code'
   rsync --archive --exclude '.git' "${skeleton_download_dir}/" "${role_dir}"
 
-  # Replace placeholder text ROLENAME with actual role name
-  subst_role_name "${role_dir}"
+  subst_role_name "${role_dir}" "${role_name}"
 
-  # Put the current year into the LICENSE file
+  debug "Setting year in the LICENSE file"
   sed --in-place --expression "s/YEAR/$(date +%Y)/" "${role_dir}/LICENSE.md"
 
   info "Initializing Git repository, first commit"
@@ -215,13 +217,13 @@ setup_vagrant_environment() {
 
   fetch_test_branch "${role_name}" 'vagrant'
 
-  # Create subdirectory for roles used in the test playbook
+  debug 'Create subdirectory for roles used in the test playbook'
   if [ ! -d "${role_dir}/vagrant-tests/roles" ]; then
     debug 'Making role available in the test environment'
     pushd "${role_dir}/vagrant-tests/" > /dev/null 2>&1
     mkdir roles
 
-    # Link from roles/ to the project root
+    debug 'Link from roles/ to the project root'
     ln --symbolic --force --no-dereference '../..' "roles/${role_name}"
     git add .
     git commit --quiet --message \
@@ -248,34 +250,33 @@ fetch_test_branch() {
   info "Setting up ${environment} test environment"
   debug "Fetching test branch ${test_branch} from Github"
 
-  # Create empty branch for the test code
+  debug 'Create empty branch for the test code'
   pushd "${role_dir}" > /dev/null 2>&1
   debug "Create empty branch for test code in ${role_dir}"
   git checkout --quiet --orphan "${test_branch}"
   git rm -r --force --quiet .
   popd > /dev/null 2>&1
 
-  # Copy test code from skeleton
+  debug 'Copy test code from skeleton'
   ensure_skeleton_code_is_downloaded
   pushd "${skeleton_download_dir}" > /dev/null 2>&1
-  debug "Copy test code from ${skeleton_download_dir}"
 
+  debug "Copy test code from ${skeleton_download_dir}"
   git fetch --quiet origin "${test_branch}"
   git checkout --quiet "${test_branch}"
   rsync --archive --exclude '.git' \
     "${skeleton_download_dir}/" \
     "${role_dir}"
-  subst_role_name "${role_dir}"
+  subst_role_name "${role_dir}" "${role_name}"
   popd > /dev/null 2>&1
 
-  # Set up the test branch, commit
+  debug 'Set up the test branch, commit'
   pushd "${role_dir}" > /dev/null 2>&1
   debug "Committing test code"
   git add .
   git commit --quiet --message \
     "Set up ${environment} test branch from skeleton code"
 
-  # In the master branch, create a worktree for the test code
   debug "Creating worktree for test branch in the master branch"
   git checkout --quiet master 2> /dev/null
   debug "Adding worktree"
@@ -285,12 +286,14 @@ fetch_test_branch() {
 
 #}}}
 #{{{ subst_role_name
-# Usage: subst_role_name DIR
+# Usage: subst_role_name DIR NAME
 # Replace placeholder ROLENAME with the actual role name in the
 # specified directory
 subst_role_name() {
   local dir="${1}"
+  local role_name="${2}"
 
+  debug "Replacing ROLENAME in ${dir} with actual role name ${role_name}"
   find "${dir}" -type f -exec sed --in-place \
     --expression "s/ROLENAME/${role_name}/g" {} \;
 }
@@ -418,6 +421,9 @@ EXAMPLES:
 
             Creates a role named 'nginx' and initializes test environments with
             both Vagrant and Docker.
+
+            When the role already exists, only the test environments are set
+            up.
 _EOF_
 }
 
