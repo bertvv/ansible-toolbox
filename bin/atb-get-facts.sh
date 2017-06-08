@@ -2,8 +2,8 @@
 #
 # Author: Bert Van Vreckem <bert.vanvreckem@gmail.com>
 #
-# Retrieves Ansible variables from the specified host (assumed to be a
-# Vagrant VM).
+# Retrieves Ansible variables (facts, info about the host) from the
+# specified host (assumed to be a Vagrant VM).
 #
 # See usage() for details.
 
