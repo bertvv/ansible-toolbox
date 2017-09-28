@@ -131,7 +131,7 @@ unique_ova_name() {
   local base_name="${vm}-${today}"
 
   if [ ! -f "${base_name}.ova" ]; then
-    echo "${base_name}"
+    echo "${base_name}.ova"
   else
     local num=1
     while [ -f "${base_name}-${num}.ova" ]; do
