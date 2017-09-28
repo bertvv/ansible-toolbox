@@ -7,6 +7,23 @@
 set -o errexit # abort on nonzero exitstatus
 set -o nounset # abort on unbound variable
 
+#{{{ Variables
+
+# Color definitions
+readonly reset='\e[0m'
+readonly cyan='\e[0;36m'
+readonly red='\e[0;31m'
+readonly yellow='\e[0;33m'
+
+# Default installation directory
+if [ "${UID}" -eq "0" ]; then
+  install_dir="/usr/local/bin"
+else
+  install_dir="${HOME}/.local/bin"
+fi
+
+src_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/bin"
+#}}}
 #{{{ Functions
 
 usage() {
@@ -24,13 +41,14 @@ _EOF_
 }
 
 # Usage: validate_install_dir DIR
-# Ensures the installation directory exists
+# Checks whether the installation directory exists
 validate_install_dir() {
   local dir="${1}"
+  debug "Checking whether installation dir ${dir} exists"
 
   if [ ! -d "${dir}" ]; then
-    echo "Installation directory ‘${dir}’ doesn't exist"
-    echo "Create it or specify an existing directory"
+    error "Installation directory ‘${dir}’ doesn't exist"
+    error "Create it or specify an existing directory"
     usage
     exit 1
   fi
@@ -46,6 +64,8 @@ install_script() {
   local script_name="${script_path##*/}"
   local cmd_name="${script_name%.sh}"
 
+  #debug "Installing ${script_name} to ${cmd_name}"
+
   install --compare --verbose \
     "${script_path}" "${install_dir}/${cmd_name}"
 }
@@ -53,6 +73,7 @@ install_script() {
 # Usage: update_path_in_bashrc
 # Adds the installation directory to the end of ~/.bashrc
 update_path_in_bashrc() {
+  info "Adding installation directory to ~/.bashrc"
 cat >> "${HOME}/.bashrc" <<-_EOF_
 
 # Add Ansible Toolbox scripts to the PATH
@@ -63,28 +84,38 @@ _EOF_
 # Usage ensure_scripts_on_PATH
 # Check whether the installed scripts are on the ${PATH} and if not, add
 # installation directory to ~/.bashrc if possible
-ensure_scripts_on_PATH() {
+ensure_scripts_on_path() {
 
   if ! which atb-init > /dev/null 2>&1; then
     if [ -f "${HOME}/.bashrc" ]; then
       update_path_in_bashrc
     else
-      echo "Warning: the installation directory is not in the PATH"
+      info "Warning: the installation directory is not in the PATH"
     fi
   fi
 }
 
-#}}}
-#{{{ Variables
+# Usage: info [ARG]...
+#
+# Prints all arguments on the standard output stream
+info() {
+  printf "${yellow}>>> %s${reset}\n" "${*}"
+}
 
-# Default installation directory
-if [ "${UID}" -eq "0" ]; then
-  install_dir="/usr/local/bin"
-else
-  install_dir="${HOME}/.local/bin"
-fi
+# Usage: debug [ARG]...
+#
+# Prints all arguments on the standard output stream
+debug() {
+  printf "${cyan}### %s${reset}\n" "${*}"
+}
 
-src_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/bin"
+# Usage: error [ARG]...
+#
+# Prints all arguments on the standard error stream
+error() {
+  printf "${red}!!! %s${reset}\n" "${*}" 1>&2
+}
+
 #}}}
 #{{{ Command line parsing
 
@@ -102,8 +133,9 @@ fi
 
 validate_install_dir "${install_dir}"
 
-for script in "${src_dir}"/*; do
+debug "Installing scripts: ${src_dir}/*.sh"
+for script in ${src_dir}/*.sh; do
   install_script "${script}"
 done
 
-ensure_scripts_on_PATH
+ensure_scripts_on_path
