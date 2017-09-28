@@ -15,7 +15,7 @@ Usage: ${0} [OPTIONS] [INSTALL_DIR]
 
   Installs the scripts into INSTALL_DIR. If the installation
   directory was not specified, install into /usr/local/bin
-  when invoked by the superuser, or else into ~/bin.
+  when invoked by the superuser, or else into ~/.local/bin.
 
 Options:
 
@@ -81,7 +81,7 @@ ensure_scripts_on_PATH() {
 if [ "${UID}" -eq "0" ]; then
   install_dir="/usr/local/bin"
 else
-  install_dir="${HOME}/bin"
+  install_dir="${HOME}/.local/bin"
 fi
 
 src_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/bin"
@@ -89,7 +89,7 @@ src_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/bin"
 #{{{ Command line parsing
 
 if [ "$#" -gt "0" ]; then
-  if [ "$1" = "-h" -o "$1" = "--help" ]; then
+  if [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
     usage
     exit 0
   else
