@@ -2,12 +2,15 @@
 #
 # Author: Bert Van Vreckem <bert.vanvreckem@gmail.com>
 #
-#/ Usage: atb-list-variables [-t|--table] ROLENAME
+#/ Usage: atb-list-variables [-t|--table] [ROLENAME]
 #/        atb-list-variables [-h|--help]
 #/
 #/ Searches the current directory (assumed to contain an Ansible role) for
 #/ role variables. This assumes each variable is prefixed with the role
 #/ name, e.g. bind_service.
+#/
+#/ If no ROLENAME was specified explicitly, the name of the current directory
+#/ is used.
 #/
 #/ OPTIONS
 #/   -h, --help
@@ -19,6 +22,12 @@
 #/ EXAMPLES
 #/  atb-list-variables bind
 #/  atb-list-variables --table vsftpd
+#
+# Dependencies:
+#
+# - coreutils
+# - grep
+# - sed
 
 #{{{ Bash settings
 # abort on nonzero exitstatus
@@ -41,31 +50,46 @@ readonly yellow='\e[0;33m'
 # Debug info ('on' to enable)
 readonly debug='on'
 
-formatter='cat'  # How should the output be formatted
-prefix=''        # Role variable prefix
+# Script configuration, default values
+formatter='cat'     # How should the output be formatted
+prefix="${PWD##*/}" # Role variable prefix (default = current dir)
 #}}}
 
 main() {
   check_args "${@}"
+
+  log "Searching for role variables starting with ${prefix}_"
   list_role_variables "${prefix}" \
     | ${formatter}
+
+  log "Variables in vars/ that cannot be set by the user:"
+  list_role_variables "${prefix}" vars/*.yml
 }
 
 #{{{ Helper functions
 
-# Usage: list_role_variables ROLE
+# Usage: list_role_variables ROLE [FILE]...
 #
 # List all role variables with prefix ROLE_ in YAML or Jinja files within the
 # current directory.
 list_role_variables() {
   local prefix="${1}"
+  shift
+  local files_to_search=${*:-$(ls ./*/*.yml ./*/*.j2)}
 
-  ag --nofilename --nocolor --nonumbers --only-matching \
-    "\b${prefix}_.[a-z0-9_]*\b" ./*/*.yml ./*/*.j2 \
+  set -x
+  grep --no-filename --color=never --only-matching \
+    "\b${prefix}_.[a-z0-9_]*\b" ${files_to_search} \
     | sort \
+    | sed '/^$/d' \
     | uniq
+  set +x
 }
 
+# Usage: ... | print_markdown_table
+#
+# Prints a Markdown-formatted table useful for Ansible role documentation
+# with text from stdin (variable names) in the first column
 print_markdown_table() {
   printf '| Variable | Default | Comment |\n'
   printf '| :---     | :---    | :---    |\n'
@@ -80,47 +104,51 @@ usage() {
   grep '^#/' "${script_dir}/${script_name}" | sed 's/^#\/\w*//'
 }
 
+# Process command line options
 check_args() {
-  if [ "${#}" -eq '0' ]; then
-    error "Expected at least 1 argument, but got ${#}"
-    usage
-    exit 1
-  elif [ "${1}" = '-h' ] || [ "${1}" = '--help' ]; then
-    usage
-    exit 0
-  elif [ "${1}" = '-t' ] || [ "${1}" = '--table' ]; then
-    formatter=print_markdown_table
-    shift
-  fi
-  if [ "${#}" -ge 1 ]; then
-    prefix="${1}"
-  else
-    error "No role name prefix specified!"
-    usage
-    exit 1
-  fi
+  while [ "$#" -gt '0' ]; do
+    case ${1} in
+      -h|--help)
+        usage
+        exit 0
+        ;;
+      -t|--table)
+        formatter=print_markdown_table
+        shift
+        ;;
+      -*)
+        error "Unrecognized option: ${1}"
+        usage
+        exit 2
+        ;;
+      *)
+        prefix="${1}"
+        shift
+        ;;
+    esac
+  done
 }
 
 # Usage: log [ARG]...
 #
-# Prints all arguments on the standard output stream
+# Prints all arguments on the standard error stream
 log() {
-  printf "${yellow}>>> %s${reset}\\n" "${*}"
+  printf "${yellow}>>> %s${reset}\\n" "${*}" >&2
 }
 
 # Usage: debug [ARG]...
 #
-# Prints all arguments on the standard output stream,
+# Prints all arguments on the standard error stream,
 # if debug output is enabled
 debug() {
-  [ "${debug}" != 'on' ] || printf "${cyan}### %s${reset}\\n" "${*}"
+  [ "${debug}" != 'on' ] || printf "${cyan}### %s${reset}\\n" "${*}" >&2
 }
 
 # Usage: error [ARG]...
 #
 # Prints all arguments on the standard error stream
 error() {
-  printf "${red}!!! %s${reset}\\n" "${*}" 1>&2
+  printf "${red}!!! %s${reset}\\n" "${*}" >&2
 }
 
 
