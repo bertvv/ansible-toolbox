@@ -77,13 +77,11 @@ list_role_variables() {
   shift
   local files_to_search=${*:-$(ls ./*/*.yml ./*/*.j2)}
 
-  set -x
   grep --no-filename --color=never --only-matching \
     "\b${prefix}_.[a-z0-9_]*\b" ${files_to_search} \
     | sort \
     | sed '/^$/d' \
     | uniq
-  set +x
 }
 
 # Usage: ... | print_markdown_table
