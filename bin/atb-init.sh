@@ -18,6 +18,7 @@
 #/  atb-init lampstack bertvv.mariadb bertvv.httpd
 #
 # Dependencies:
+# - ansible-galaxy
 # - git
 # - unzip
 # - wget
@@ -81,7 +82,7 @@ initialize_project_dir() {
   unzip "${skeleton_code_archive}"
   rm "${skeleton_code_archive}"
   mv ansible-skeleton-master "${project}"
-  
+
   log "Initializing Git repository"
   cd "${project}"
   git init
@@ -114,10 +115,10 @@ install_role() {
     local user=${1%%\.*}
     local role=${1##*\.}
     local git_url="https://github.com/${user}/ansible-role-${role}.git"
-    
+
     log "Trying to clone role from ${git_url}"
     if ! git clone "${git_url}" "ansible/roles/${role_name}"; then
-      
+
       log "This does not seem to be an existing Github repo"
       local git_url="https://github.com/${user}/ansible-${role}.git"
 
