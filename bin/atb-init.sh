@@ -43,7 +43,7 @@ readonly debug='on'
 
 # Download location of skeleton code
 readonly download_url='https://github.com/bertvv/ansible-skeleton/archive'
-readonly skeleton_code_archive='master.zip'
+readonly skeleton_code_archive='ansible-skeleton-master.zip'
 #}}}
 
 main() {
@@ -78,7 +78,7 @@ initialize_project_dir() {
   fi
 
   log "Downloading skeleton code"
-  wget "${download_url}/${skeleton_code_archive}"
+  wget "${download_url}/master.zip"
   unzip "${skeleton_code_archive}"
   rm "${skeleton_code_archive}"
   mv ansible-skeleton-master "${project}"
